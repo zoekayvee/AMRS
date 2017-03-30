@@ -1,0 +1,4 @@
+LOAD R1, -99
+ADD R1, R2
+SUB R1, R2, 32
+CMP R1, R2
