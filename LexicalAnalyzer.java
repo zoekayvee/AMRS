@@ -3,9 +3,12 @@ import java.io.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class LexicalAnalyzer{
+public class LexicalAnalyzer {
 	int lineNum = 0;
+	Flag OF = new Flag();
+	Flag UF = new Flag();
 	ArrayList<Vector> instructions = new ArrayList<Vector>();
+	Flag error = new Flag(false);
 	
 	public LexicalAnalyzer() {
 		try {
@@ -15,22 +18,41 @@ public class LexicalAnalyzer{
 			String line = null;
 			String delims = (" ");
 
+
 			// Retrieves the rest of the data
 			while ((line = inputCode.readLine())!= null) {
 				lineNum++;
+
+				Boolean spaceFound = false;
+				for(int i=0; i<line.length(); i++){
+					if(!spaceFound){
+						spaceFound = (line.charAt(i) == ' ') ? true : false;
+					}else if(line.charAt(i) == ' '){
+						System.out.printf("Error at Line %d\n", lineNum);
+						error.toggle();
+						break;
+					}else{
+						spaceFound = false;
+					}
+				}
+
+				if (error.getValue() == true) {
+					break;
+				}
 
 				String[] tokens = line.split(delims);
 				Vector lexemes = new Vector();
 
 				for (int i = 0; i < tokens.length; i++){
+				// System.out.println("\"" + tokens[i] + "\"");
 					lexemes.add(tokens[i]);
 				}
 
 				if (errorChecker(lexemes)){
-					System.out.println(lexemes);
 					instructions.add(lexemes);
 				} else {
 					System.out.printf("Error at Line %d\n", lineNum);
+					error.toggle();
 					break;
 				}
 
@@ -38,10 +60,9 @@ public class LexicalAnalyzer{
 
 			inputCode.close();
 		}catch(Exception e) {
-			// System.out.println(e.getMessage());
+			System.out.println(e.getMessage());
 		}
 
-		// System.out.println(instructions);
 	}
 
 	public Boolean errorChecker(Vector lexemes) {
@@ -51,14 +72,11 @@ public class LexicalAnalyzer{
 		opcodes.add("ADD");
 		opcodes.add("SUB");
 		opcodes.add("CMP");
-
-
 		
 		// OPCODE CHECKER
 		if(!opcodes.contains(lexemes.get(0))){
 			return false;
 		}
-
 		String firstArg = (String) lexemes.get(1);
 
 		// FIRST ARGUMENT
@@ -76,7 +94,8 @@ public class LexicalAnalyzer{
 		}
 
 		// REMAINING ARGUMENTS
-		for(int i=2; i<lexemes.size(); i++){
+		int i;
+		for(i=2; i<lexemes.size(); i++){
 			String intPattern = "(-)?([0-9]+)";
 			String lexeme = (String) lexemes.get(i);
 
@@ -107,18 +126,25 @@ public class LexicalAnalyzer{
 			// if immediate value
 			else if(lexeme.matches(intPattern)){
 				int immediate = Integer.parseInt(lexeme);
-				if(immediate > 99 || immediate < -99){
-					return false;
-				}else{
-					lexemes.set(i, immediate);
-					continue;
+				
+				if (immediate > 99) {
+					immediate = 99;
+					OF.setValue(true);
+				} else if (immediate < -99){
+					immediate = -99;
+					UF.setValue(true);
 				}
+
+				lexemes.set(i, immediate);
+				continue;
+				
 			}
 
 			else return false;
 		}
 
 		return true;
+
 		// check lexemes per line
 		// look for errors
 		// return false if error found
