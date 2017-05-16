@@ -36,6 +36,8 @@ public class Main{
 	static ArrayList<Integer> executepipeline = new ArrayList<Integer>();
 	static ArrayList<Integer> memorypipeline = new ArrayList<Integer>();
 	static ArrayList<Integer> writebackpipeline = new ArrayList<Integer>();
+
+	static ArrayList<Vector> pipes = new ArrayList<Vector>();
 	
 	public static void setDependencies(ArrayList<Vector> instructions){
 		/*
@@ -52,6 +54,41 @@ public class Main{
 
 		// save all dependencies to ArrayList<Vector> dependencies 
 		// ArrayList<Vector> dependencies is already declared as static variable
+
+		for(int i=0; i<instructions.size()-1; i++){
+			for(int j=i+1; j<instructions.size(); j++){
+
+				if(instructions.get(i).get(1).equals(instructions.get(j).get(2))){
+
+					Vector hazard = new Vector();
+					hazard.add(i+1);
+					hazard.add(j+1);
+					hazard.add("RAW");
+					System.out.println(hazard);
+					hazards.add(hazard);
+				}
+					
+				if(instructions.get(i).get(2).equals(instructions.get(j).get(1))){
+
+					Vector hazard = new Vector();
+					hazard.add(i+1);
+					hazard.add(j+1);
+					hazard.add("WAR");
+					System.out.println(hazard);
+					hazards.add(hazard);
+				}
+					
+				if(instructions.get(i).get(1).equals(instructions.get(j).get(1))){
+
+					Vector hazard = new Vector();
+					hazard.add(i+1);
+					hazard.add(j+1);
+					hazard.add("WAW");
+					System.out.println(hazard);
+					hazards.add(hazard);
+				}
+			}
+		}
 	}
 
 	public static void main(String[] args) {
@@ -136,6 +173,7 @@ public class Main{
 
 							if(instr.checkDependencies()){
 								instr.stall();
+								stalls++;
 								decode = -1;
 							}else{
 								// Decode instruction
@@ -162,6 +200,7 @@ public class Main{
 							for(int i=index; i<processQueue.size(); i++){
 								if(processQueue.get(i).isStalled && processQueue.get(i).getStalled() == 0){
 									processQueue.get(i).stall();
+									stalls++;
 								}
 							}
 
@@ -178,6 +217,7 @@ public class Main{
 						if(instr.isStalled && instr.getStalled() == 1){
 							if(instr.checkDependencies()){
 								instr.stall();
+								stalls++;
 								execute = -1;
 							}else{
 								// Execute instruction
@@ -205,6 +245,7 @@ public class Main{
 							for(int i=index; i<processQueue.size(); i++){
 								if(processQueue.get(i).isStalled && processQueue.get(i).getStalled() == 1){
 									processQueue.get(i).stall();
+									stalls++;
 								}
 							}
 							break;
@@ -221,6 +262,7 @@ public class Main{
 						if(instr.isStalled && instr.getStalled() == 2){
 							if(instr.checkDependencies()){
 								instr.stall();
+								stalls++;
 								memory = -1;
 							}else{
 								// Memory access
@@ -242,6 +284,7 @@ public class Main{
 							for(int i=index; i<processQueue.size(); i++){
 								if(processQueue.get(i).isStalled && processQueue.get(i).getStalled() == 2){
 									processQueue.get(i).stall();
+									stalls++;
 								}
 							}
 							break;
@@ -259,6 +302,7 @@ public class Main{
 						if(instr.isStalled && instr.getStalled() == 3){
 							if(instr.checkDependencies()){
 								instr.stall();
+								stalls++;
 								writeback = -1;
 							}else{
 								// Write to memory
@@ -287,6 +331,7 @@ public class Main{
 							for(int i=index; i<processQueue.size(); i++){
 								if(processQueue.get(i).isStalled && processQueue.get(i).getStalled() == 3){
 									processQueue.get(i).stall();
+									stalls++;
 								}
 							}
 							break;
@@ -305,6 +350,13 @@ public class Main{
 			memorypipeline.add(memory);
 			writebackpipeline.add(writeback);
 
+			Vector pipe = new Vector();
+			pipe.add(fetch);
+			pipe.add(decode);
+			pipe.add(execute);
+			pipe.add(memory);
+			pipe.add(writeback);
+			pipes.add(pipe);
 
 			printQueues(clockcycle);
 
@@ -323,59 +375,131 @@ public class Main{
 
 	public static void printQueues(int clockcycle){
 		System.out.println("Clock Cycle: " + clockcycle);
+		System.out.println("Stalls: " + stalls);
 
-		for(int i=0; i<fetchpipeline.size(); i++){
-			if(fetchpipeline.get(i) == 1){
-				System.out.print("F ");
-			}else if(fetchpipeline.get(i) == 0){
-				System.out.print("  ");
-			}else{
-				System.out.print("S ");
+		for(int i=0; i<pipes.size(); i++){
+			// Fetch
+			int status = (int) pipes.get(i).get(0);
+			switch(status){
+				case -1:
+					System.out.print("S ");
+					break;
+				case 0:
+					System.out.print("  ");
+					break;
+				case 1:
+					System.out.print("F ");
+					break;
 			}
-		}
-		System.out.println();
-		for(int i=0; i<decodepipeline.size(); i++){
-			if(decodepipeline.get(i) == 1){
-				System.out.print("D ");
-			}else if(decodepipeline.get(i) == 0){
-				System.out.print("  ");
-			}else{
-				System.out.print("S ");
+			// Decode
+			status = (int) pipes.get(i).get(1);
+			switch(status){
+				case -1:
+					System.out.print("S ");
+					break;
+				case 0:
+					System.out.print("  ");
+					break;
+				case 1:
+					System.out.print("D ");
+					break;
 			}
-		}
-		System.out.println();
+			// Execute
+			status = (int) pipes.get(i).get(2);
+			switch(status){
+				case -1:
+					System.out.print("S ");
+					break;
+				case 0:
+					System.out.print("  ");
+					break;
+				case 1:
+					System.out.print("E ");
+					break;
+			}
 
-		for(int i=0; i<executepipeline.size(); i++){
-			if(executepipeline.get(i) == 1){
-				System.out.print("E ");
-			}else if(executepipeline.get(i) == 0){
-				System.out.print("  ");
-			}else{
-				System.out.print("S ");
+			// Memory
+			status = (int) pipes.get(i).get(3);
+			switch(status){
+				case -1:
+					System.out.print("S ");
+					break;
+				case 0:
+					System.out.print("  ");
+					break;
+				case 1:
+					System.out.print("M ");
+					break;
 			}
-		}
-		System.out.println();
 
-		for(int i=0; i<memorypipeline.size(); i++){
-			if(memorypipeline.get(i) == 1){
-				System.out.print("M ");
-			}else if(memorypipeline.get(i) == 0){
-				System.out.print("  ");
-			}else{
-				System.out.print("S ");
+			// Writeback
+			status = (int) pipes.get(i).get(4);
+			switch(status){
+				case -1:
+					System.out.print("S ");
+					break;
+				case 0:
+					System.out.print("  ");
+					break;
+				case 1:
+					System.out.print("W ");
+					break;
 			}
+			System.out.println();
 		}
-		System.out.println();
 
-		for(int i=0; i<writebackpipeline.size(); i++){
-			if(writebackpipeline.get(i) == 1){
-				System.out.print("W ");
-			}else if(writebackpipeline.get(i) == 0){
-				System.out.print("  ");
-			}else{
-				System.out.print("S ");
-			}
-		}
-		System.out.println();
+		// for(int i=0; i<fetchpipeline.size(); i++){
+		// 	if(fetchpipeline.get(i) == 1){
+		// 		System.out.print("F ");
+		// 	}else if(fetchpipeline.get(i) == 0){
+		// 		System.out.print("  ");
+		// 	}else{
+		// 		System.out.print("S ");
+		// 	}
+		// }
+		// System.out.println();
+		// for(int i=0; i<decodepipeline.size(); i++){
+		// 	if(decodepipeline.get(i) == 1){
+		// 		System.out.print("D ");
+		// 	}else if(decodepipeline.get(i) == 0){
+		// 		System.out.print("  ");
+		// 	}else{
+		// 		System.out.print("S ");
+		// 	}
+		// }
+		// System.out.println();
+
+		// for(int i=0; i<executepipeline.size(); i++){
+		// 	if(executepipeline.get(i) == 1){
+		// 		System.out.print("E ");
+		// 	}else if(executepipeline.get(i) == 0){
+		// 		System.out.print("  ");
+		// 	}else{
+		// 		System.out.print("S ");
+		// 	}
+		// }
+		// System.out.println();
+
+		// for(int i=0; i<memorypipeline.size(); i++){
+		// 	if(memorypipeline.get(i) == 1){
+		// 		System.out.print("M ");
+		// 	}else if(memorypipeline.get(i) == 0){
+		// 		System.out.print("  ");
+		// 	}else{
+		// 		System.out.print("S ");
+		// 	}
+		// }
+		// System.out.println();
+
+		// for(int i=0; i<writebackpipeline.size(); i++){
+		// 	if(writebackpipeline.get(i) == 1){
+		// 		System.out.print("W ");
+		// 	}else if(writebackpipeline.get(i) == 0){
+		// 		System.out.print("  ");
+		// 	}else{
+		// 		System.out.print("S ");
+		// 	}
+		// }
+		// System.out.println();
 	}
 }
