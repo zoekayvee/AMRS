@@ -14,6 +14,7 @@ public class Main{
 	static int instrDone = 0;
 	static ArrayList<Instruction> processQueue = new ArrayList<Instruction>();
 
+	static ArrayList<Vector> hazards = new ArrayList<Vector>();
 	static ArrayList<Vector> dependencies = new ArrayList<Vector>();
 
 	/*
@@ -44,6 +45,9 @@ public class Main{
 			2 - type of hazard (string)
 
 			Note: The id of instruction is its position in the instructions set
+
+			Example of a vector
+			< 1, 4, RAW >
 		*/
 
 		// save all dependencies to ArrayList<Vector> dependencies 
