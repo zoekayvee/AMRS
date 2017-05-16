@@ -41,6 +41,10 @@ public class Instruction {
 		this.operand2 = operand2;
 	}
 
+	public Object getOperand2(){
+		return this.operand2;
+	}
+
 	public void setOperand1(Object operand1) {
 		this.operand1 = operand1;
 	}

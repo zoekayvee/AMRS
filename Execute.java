@@ -7,7 +7,7 @@ public class Execute {
 	static Flag UF = new Flag();
 	static Flag OF = new Flag();
 
-	public Execute (instruction) {
+	public Execute (Instruction instruction) {
 		switch ((String) instruction.get(0)) {
 				case "LOAD" :	load(instruction);
 								break;
