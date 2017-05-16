@@ -1,8 +1,11 @@
+import java.util.*;
+import java.io.*;
+
 public class Instruction {
 	Vector instr;
 	int stage;
 	int stalled;
-	String opcode;
+	Object opcode;
 	Object operand1;
 	Object operand2;
 
@@ -20,9 +23,10 @@ public class Instruction {
 		this.instr = instr;
 		this.stage = 0; // initialize to fetch
 		this.stalled = -1;
+		this.initialize();
 	}
 
-	public initialize(){
+	public void initialize(){
 		this.opcode = this.instr.get(0);
 		this.operand1 = this.instr.get(1);
 		this.operand2 = this.instr.get(2);
@@ -44,13 +48,17 @@ public class Instruction {
 		return this.stage;
 	}
 
-	public stall(){
+	public void stall(){
 		this.stalled = this.stage;
 		this.stage = -1;
 	}
 
-	public restore(){
+	public void restore(){
 		this.stage = this.stalled + 1;
 		this.stalled = -1;
+	}
+
+	public int getStalled(){
+		return this.stalled;
 	}
 }
