@@ -2,9 +2,9 @@ import java.util.*;
 import java.io.*;
 
 public class Instruction {
-	// Vector instr;  			['load' R1, 5]
-	// Vector decoded; 		['load' 0, 5]
-	// int executed; 			5
+	Vector instr;  			//['load' R1, 5]
+	Vector decoded; 		//['load' 0, 5]
+	int executed; 			//5
 	// memory
 	// writeback						
 
@@ -37,6 +37,14 @@ public class Instruction {
 		this.operand2 = this.instr.get(2);
 	} 
 
+	public Object getOpcode(){
+		return this.opcode;
+	}
+
+	public Vector getInstructionVector(){
+		return this.instr;
+	}
+
 	public void setOperand2(Object operand2) {
 		this.operand2 = operand2;
 	}
@@ -47,6 +55,10 @@ public class Instruction {
 
 	public void setOperand1(Object operand1) {
 		this.operand1 = operand1;
+	}
+
+	public Object getOperand1(){
+		return this.operand1;
 	}
 
 	public void nextStage() {

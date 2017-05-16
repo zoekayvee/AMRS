@@ -10,6 +10,7 @@ public class Main{
 	static Flag OF = new Flag();
 	static int instrSetSize;
 	static int counter = 0;
+	static int stalls = 0;
 	static int instrDone = 0;
 	static ArrayList<Instruction> processQueue = new ArrayList<Instruction>(); 
 
@@ -43,7 +44,7 @@ public class Main{
 
 
 		// PIPELINING
-		int clockcycle = 0;
+		int clockcycle = 1;
 		while(instrDone != instrSetSize){
 
 			// Pipeline empty
@@ -52,10 +53,7 @@ public class Main{
 				Instruction instr = new Instruction(parse.instructions.get(counter));
 				processQueue.add(instr);
 				fetch = true;
-				counter++;
-
-				System.out.println("F");
-			
+				counter++;			
 			// Pipeline not empty
 			}else{
 				int fcount = 0;
@@ -63,6 +61,7 @@ public class Main{
 				int ecount = 0;
 				int mcount = 0;
 				int wcount = 0;
+				int scount = 0;
 
 				// count waiting instr per stages
 				for(Instruction instr : processQueue){
@@ -84,7 +83,7 @@ public class Main{
 
 				// FETCH an instruction
 				if(counter != instrSetSize){
-					System.out.print("F ");
+					// System.out.print("F ");
 					Instruction instr = new Instruction(parse.instructions.get(counter));
 
 					// update count
@@ -100,7 +99,7 @@ public class Main{
 						// look for 1ST instruction in queue to decode
 						// instr must be on FETCH stage first
 						if(instr.getStage() == 0){
-							System.out.print("D ");
+							// System.out.print("D ");
 							// Decode instruction
 							// Decode decoder = new Decode(instr);
 							// Instruction decoded = processQueue.decoder.getDecoded();
@@ -132,7 +131,7 @@ public class Main{
 						// look for instruction to execute
 						// must be on decode stage before execute
 						if(instr.getStage() == 1){
-							System.out.print("E ");
+							// System.out.print("E ");
 							// Execute executer = new Execute(instr);
 							instr.nextStage();
 							processQueue.remove(index);
@@ -168,6 +167,7 @@ public class Main{
 			writebackpipeline.add(writeback);
 
 
+			printQueues(clockcycle);
 
 
 			// reset
@@ -180,5 +180,35 @@ public class Main{
 			clockcycle++;
 
 		}
+	}
+
+	public static void printQueues(int clockcycle){
+		System.out.println("Clock Cycle: " + clockcycle);
+
+		for(int i=0; i<fetchpipeline.size(); i++){
+			if(fetchpipeline.get(i)){
+				System.out.print("F ");
+			}else{
+				System.out.print("  ");
+			}
+		}
+		System.out.println();
+		for(int i=0; i<decodepipeline.size(); i++){
+			if(decodepipeline.get(i)){
+				System.out.print("D ");
+			}else{
+				System.out.print("  ");
+			}
+		}
+		System.out.println();
+
+		for(int i=0; i<executepipeline.size(); i++){
+			if(executepipeline.get(i)){
+				System.out.print("E ");
+			}else{
+				System.out.print("  ");
+			}
+		}
+		System.out.println();
 	}
 }

@@ -10,10 +10,10 @@ public class Decode {
 		// Checks if source is not an integer
 		if (decoded.getOperand2() instanceof Integer == false) {
 			// Identifies source's register
-			String source = (String) decoded.get(2);
+			String source = (String) decoded.getOperand2();
 			String sourceReg = (String) source.substring(1);
 			int sourceRegNo = Integer.parseInt(sourceReg);
-			decoded.setOperand2(r[sourceRegNo].getValue());
+			decoded.setOperand2(Main.r[sourceRegNo].getValue());
 		}		
 	}
 

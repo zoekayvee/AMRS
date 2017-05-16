@@ -8,14 +8,14 @@ public class Execute {
 	static Flag OF = new Flag();
 
 	public Execute (Instruction instruction) {
-		switch ((String) instruction.get(0)) {
-				case "LOAD" :	load(instruction);
+		switch ((String) instruction.getOpcode()) {
+				case "LOAD" :	load(instruction.getInstructionVector());
 								break;
-				case "ADD" 	:	add(instruction);
+				case "ADD" 	:	add(instruction.getInstructionVector());
 								break;
-				case "SUB" 	:	sub(instruction);
+				case "SUB" 	:	sub(instruction.getInstructionVector());
 								break;
-				case "CMP" 	: 	cmp(instruction);
+				case "CMP" 	: 	cmp(instruction.getInstructionVector());
 								break;
 		}
 	}
@@ -26,9 +26,9 @@ public class Execute {
 		regNo = regNo.substring(1);
 		int destReg = Integer.parseInt(regNo);
 		
-		r[destReg].setValue((int) instruction.get(2));
+		Main.r[destReg].setValue((int) instruction.get(2));
 
-		System.out.printf("R[%d]: %d\n", destReg, r[destReg].getValue());
+		System.out.printf("R[%d]: %d\n", destReg, Main.r[destReg].getValue());
 	}
 
 	public static void add(Vector instruction) {
@@ -39,7 +39,7 @@ public class Execute {
 		
 		int addendA = (int) instruction.get(2);
 
-		int sum = r[destReg].getValue() + addendA;
+		int sum = Main.r[destReg].getValue() + addendA;
 
 		if (sum > 99) {
 			sum = 99;
@@ -49,9 +49,9 @@ public class Execute {
 			UF.setValue(true);
 		}
 
-		r[destReg].setValue(sum);
+		Main.r[destReg].setValue(sum);
 
-		System.out.printf("R[%d]: %d\n", destReg, r[destReg].getValue());		
+		System.out.printf("R[%d]: %d\n", destReg, Main.r[destReg].getValue());		
 
 	}
 
@@ -63,7 +63,7 @@ public class Execute {
 		
 		int subtrahend = (int) instruction.get(2);
 
-		int difference = r[destReg].getValue() - subtrahend;
+		int difference = Main.r[destReg].getValue() - subtrahend;
 		
 		if (difference > 99) {
 			difference = 99;
@@ -73,9 +73,9 @@ public class Execute {
 			UF.setValue(true);
 		}
 
-		r[destReg].setValue(difference);
+		Main.r[destReg].setValue(difference);
 
-		System.out.printf("R[%d]: %d\n", destReg, r[destReg].getValue());
+		System.out.printf("R[%d]: %d\n", destReg, Main.r[destReg].getValue());
 	
 	}
 
@@ -88,7 +88,7 @@ public class Execute {
 		
 		int subtrahend = (int) instruction.get(2);
 
-		int difference = r[destReg].getValue() - subtrahend;
+		int difference = Main.r[destReg].getValue() - subtrahend;
 		
 		if (difference == 0) {
 			ZF.setValue(true);
