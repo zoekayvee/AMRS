@@ -49,6 +49,26 @@ public class Main{
 			Example of a vector
 			< 1, 4, RAW >
 		*/
+		int i, j;
+
+ 		for (i=0; i<instructions.size; i++) {	
+ 			for (j=i+1; j<instructions.size; j++) {
+				
+ 			
+ 				if(instructions.get(i).get(1).equals(instructions.get(j).get(2))){  //instrction1.operand1.equals(instruction2.operand2)
+ 					dependencies.add(i+1,j+1,"RAW");									  
+ 				}
+ 				else if(instructions.get(i).get(2).equals(instructions.get(j).get(1))){ //instrction1.operand2.equals(instruction2.operand1)
+ 					dependencies.add(i+1,j+1,"WAR");
+ 				}
+ 				else if (instructions.get(i).get(1).equals(instructions.get(j).get(1))){ //instrction1.operand1.equals(instruction2.operand1)
+ 					dependencies.add(i+1,j+1,"WAW");
+ 				}
+ 				else{
+
+ 				}
+ 			}
+ 		}
 
 		// save all dependencies to ArrayList<Vector> dependencies 
 		// ArrayList<Vector> dependencies is already declared as static variable
