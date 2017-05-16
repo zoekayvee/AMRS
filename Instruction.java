@@ -2,6 +2,7 @@ import java.util.*;
 import java.io.*;
 
 public class Instruction {
+	int id;
 	Vector instr;  			//['load' R1, 5]
 	Vector decoded; 		//['load' 0, 5]
 	int executed; 			//5
@@ -10,6 +11,7 @@ public class Instruction {
 
 	int stage;
 	int stalled;
+	boolean isStalled;
 	Object opcode;
 	Object operand1;
 	Object operand2;
@@ -25,9 +27,11 @@ public class Instruction {
 	*/
 		
 	public Instruction(Vector instr) {
+		this.id = Main.counter + 1;
 		this.instr = instr;
 		this.stage = 0; // initialize to fetch
 		this.stalled = -1;
+		this.isStalled = false;
 		this.initialize();
 	}
 
@@ -70,16 +74,57 @@ public class Instruction {
 	}
 
 	public void stall(){
-		this.stalled = this.stage;
 		this.stage = -1;
+		this.isStalled = true;
+		this.stalled = this.stage;
 	}
 
 	public void restore(){
 		this.stage = this.stalled + 1;
+		this.isStalled = false;
 		this.stalled = -1;
 	}
 
 	public int getStalled(){
 		return this.stalled;
 	}
+
+	public boolean checkDependencies(){
+		boolean ready = true;
+		boolean flag;
+
+		for(Vector dependency : Main.dependencies){
+			flag = false;
+			if((int) dependency.get(0) == this.id){
+				// check if the dependency is still in the process queue
+
+				for(Instruction instr : Main.processQueue){
+					if(instr.id == (int) dependency.get(1)){
+						ready = false;
+						flag = true;
+						break;
+					}
+				}
+
+				if(flag) break;
+			}
+
+			if((int) dependency.get(1) == this.id){
+				// check if the dependency is still in the process queue
+
+				for(Instruction instr : Main.processQueue){
+					if(instr.id == (int) dependency.get(0)){
+						ready = false;
+						flag = true;
+						break;
+					}
+				}
+
+				if(flag) break;
+			}
+		}
+
+		return (ready) ? true : false;
+	}
+
 }

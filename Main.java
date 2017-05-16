@@ -12,20 +12,44 @@ public class Main{
 	static int counter = 0;
 	static int stalls = 0;
 	static int instrDone = 0;
-	static ArrayList<Instruction> processQueue = new ArrayList<Instruction>(); 
+	static ArrayList<Instruction> processQueue = new ArrayList<Instruction>();
 
-	static boolean fetch = false;
-	static boolean decode = false;
-	static boolean execute = false;
-	static boolean memory = false;
-	static boolean writeback = false;
+	static ArrayList<Vector> dependencies = new ArrayList<Vector>();
 
-	static ArrayList<Boolean> fetchpipeline = new ArrayList<Boolean>();
-	static ArrayList<Boolean> decodepipeline = new ArrayList<Boolean>();
-	static ArrayList<Boolean> executepipeline = new ArrayList<Boolean>();
-	static ArrayList<Boolean> memorypipeline = new ArrayList<Boolean>();
-	static ArrayList<Boolean> writebackpipeline = new ArrayList<Boolean>();
+	/*
+		STATUS for pipeline
+		-1 - Stall
+		0 - Inactive
+		1 - Active
+
+	*/
+
+	static int fetch = 0;
+	static int decode = 0;
+	static int execute = 0;
+	static int memory = 0;
+	static int writeback = 0;
+
+	static ArrayList<Integer> fetchpipeline = new ArrayList<Integer>();
+	static ArrayList<Integer> decodepipeline = new ArrayList<Integer>();
+	static ArrayList<Integer> executepipeline = new ArrayList<Integer>();
+	static ArrayList<Integer> memorypipeline = new ArrayList<Integer>();
+	static ArrayList<Integer> writebackpipeline = new ArrayList<Integer>();
 	
+	public static void setDependencies(ArrayList<Vector> instructions){
+		/*
+			Vector contains 3 elements
+			0 - instruction 1 ID (int)
+			1 - instruction 2 ID (int)
+			2 - type of hazard (string)
+
+			Note: The id of instruction is its position in the instructions set
+		*/
+
+		// save all dependencies to ArrayList<Vector> dependencies 
+		// ArrayList<Vector> dependencies is already declared as static variable
+	}
+
 	public static void main(String[] args) {
 		// Parse input code
 		LexicalAnalyzer parse = new LexicalAnalyzer();
@@ -42,6 +66,8 @@ public class Main{
 			r[i] = new Register(i);
 		}
 
+		// Identify dependencies
+		setDependencies(parse.instructions);
 
 		// PIPELINING
 		int clockcycle = 1;
@@ -52,7 +78,7 @@ public class Main{
 				// Perform FETCH only
 				Instruction instr = new Instruction(parse.instructions.get(counter));
 				processQueue.add(instr);
-				fetch = true;
+				fetch = 1;
 				counter++;			
 			// Pipeline not empty
 			}else{
@@ -66,6 +92,12 @@ public class Main{
 				// count waiting instr per stages
 				for(Instruction instr : processQueue){
 					switch(instr.getStage()){
+						case -1:
+							if(instr.getStalled() == 0) dcount++;
+							else if(instr.getStalled() == 1) ecount++;
+							else if(instr.getStalled() == 2) mcount++;
+							else if(instr.getStalled() == 3) wcount++;
+							break;
 						case 0:
 							dcount++;
 							break;
@@ -83,12 +115,11 @@ public class Main{
 
 				// FETCH an instruction
 				if(counter != instrSetSize){
-					// System.out.print("F ");
 					Instruction instr = new Instruction(parse.instructions.get(counter));
 
 					// update count
 					processQueue.add(instr);
-					fetch = true;
+					fetch = 1;
 					counter++;
 				}
 
@@ -96,27 +127,39 @@ public class Main{
 				if(dcount != 0){
 					int index = 0;
 					for(Instruction instr : processQueue){
-						// look for 1ST instruction in queue to decode
-						// instr must be on FETCH stage first
-						if(instr.getStage() == 0){
-							// System.out.print("D ");
-							// Decode instruction
-							// Decode decoder = new Decode(instr);
-							// Instruction decoded = processQueue.decoder.getDecoded();
-							// decoded.nextStage();
-							instr.nextStage();
-							// processQueue.set(index, decoded);
-							
-							decode = true;
+						// look for a stalled instruction waiting for decode
+						if(instr.isStalled && instr.getStalled() == 0){
 
-							// if there are other instructions
-							// to stall
-							if(dcount > 1){
-								for(int i=index; i<processQueue.size(); i++){
+							if(instr.checkDependencies()){
+								instr.stall();
+								decode = -1;
+							}else{
+								// Decode instruction
+								Decode decoder = new Decode(instr);
+								Instruction decoded = decoder.getDecoded();
+								decoded.restore();
+								processQueue.set(index, decoded);
+							}
+
+							break;
+						}
+
+						// look for instruction in queue to decode
+						if(decode == 0 && instr.getStage() == 0){
+							// Decode instruction
+							Decode decoder = new Decode(instr);
+							Instruction decoded = decoder.getDecoded();
+							decoded.nextStage();
+							processQueue.set(index, decoded);
+							
+							decode = 1;
+
+							// if there are other instructions to stall
+							for(int i=index; i<processQueue.size(); i++){
+								if(processQueue.get(i).isStalled && processQueue.get(i).getStalled() == 0){
 									processQueue.get(i).stall();
 								}
 							}
-
 
 							break;
 						}
@@ -128,34 +171,126 @@ public class Main{
 				if(ecount != 0){
 					int index = 0;
 					for(Instruction instr: processQueue){
+						if(instr.isStalled && instr.getStalled() == 1){
+							if(instr.checkDependencies()){
+								instr.stall();
+								execute = -1;
+							}else{
+								// Execute instruction
+								Execute executer = new Execute(instr);
+								instr.nextStage();
+								execute = 1;
+								// processQueue.remove(index); // for test muna 
+								// instrDone++; // for test muna
+							}
+							break;
+						}
+
 						// look for instruction to execute
 						// must be on decode stage before execute
-						if(instr.getStage() == 1){
-							// System.out.print("E ");
+						if(execute == 0 && instr.getStage() == 1){
+							// Execute instruction
 							// Execute executer = new Execute(instr);
 							instr.nextStage();
-							processQueue.remove(index);
-							instrDone++;
-							execute = true;
+							execute = 1;
+							// processQueue.remove(index);
+							// instrDone++;
 
-							// if there are other instructions
-							// to stall
-							if(ecount > 1){
-								for(int i=index; i<processQueue.size(); i++){
+
+							// if there are other instructions to stall
+							for(int i=index; i<processQueue.size(); i++){
+								if(processQueue.get(i).isStalled && processQueue.get(i).getStalled() == 1){
 									processQueue.get(i).stall();
 								}
 							}
-
 							break;
 						}
+						
 						index++;
 					}
 				}
 
 				// MEMORY
-				// WRITEBACK
+				if(mcount != 0){
+					int index = 0;
+					for(Instruction instr: processQueue){
+						if(instr.isStalled && instr.getStalled() == 2){
+							if(instr.checkDependencies()){
+								instr.stall();
+								memory = -1;
+							}else{
+								// Memory access
+								// insert code here
+								instr.nextStage();
+								memory = 1;
+							}
+							break;
+						}
 
-				System.out.println();
+						// look for instruction to do memory access
+						if(memory == 0 && instr.getStage() == 2){
+							// Memory Access
+							// insert code here
+							instr.nextStage();
+							memory = 1;
+							
+							// if there are other instructions to stall
+							for(int i=index; i<processQueue.size(); i++){
+								if(processQueue.get(i).isStalled && processQueue.get(i).getStalled() == 2){
+									processQueue.get(i).stall();
+								}
+							}
+							break;
+						}
+						
+						index++;
+					}
+				}
+
+
+				// WRITEBACK
+				if(wcount != 0){
+					int index = 0;
+					for(Instruction instr: processQueue){
+						if(instr.isStalled && instr.getStalled() == 3){
+							if(instr.checkDependencies()){
+								instr.stall();
+								writeback = -1;
+							}else{
+								// Write to memory
+								// insert code here
+								instr.nextStage();
+								writeback = 1;
+
+								processQueue.remove(index); // for test muna 
+								instrDone++; // for test muna
+
+							}
+							break;
+						}
+
+						// look for instruction to do memory access
+						if(writeback == 0 && instr.getStage() == 3){
+							// Write to memory
+							// insert code here
+							instr.nextStage();
+							writeback = 1;
+
+							processQueue.remove(index); // for test muna 
+							instrDone++; // for test muna
+							
+							// if there are other instructions to stall
+							for(int i=index; i<processQueue.size(); i++){
+								if(processQueue.get(i).isStalled && processQueue.get(i).getStalled() == 3){
+									processQueue.get(i).stall();
+								}
+							}
+							break;
+						}
+						
+						index++;
+					}
+				}
 			}
 
 			// store values for printing later
@@ -171,11 +306,11 @@ public class Main{
 
 
 			// reset
-			fetch = false;
-			decode = false;
-			execute = false;
-			memory = false;
-			writeback = false;
+			fetch = 0;
+			decode = 0;
+			execute = 0;
+			memory = 0;
+			writeback = 0;
 			
 			clockcycle++;
 
@@ -186,27 +321,55 @@ public class Main{
 		System.out.println("Clock Cycle: " + clockcycle);
 
 		for(int i=0; i<fetchpipeline.size(); i++){
-			if(fetchpipeline.get(i)){
+			if(fetchpipeline.get(i) == 1){
 				System.out.print("F ");
-			}else{
+			}else if(fetchpipeline.get(i) == 0){
 				System.out.print("  ");
+			}else{
+				System.out.print("S ");
 			}
 		}
 		System.out.println();
 		for(int i=0; i<decodepipeline.size(); i++){
-			if(decodepipeline.get(i)){
+			if(decodepipeline.get(i) == 1){
 				System.out.print("D ");
-			}else{
+			}else if(decodepipeline.get(i) == 0){
 				System.out.print("  ");
+			}else{
+				System.out.print("S ");
 			}
 		}
 		System.out.println();
 
 		for(int i=0; i<executepipeline.size(); i++){
-			if(executepipeline.get(i)){
+			if(executepipeline.get(i) == 1){
 				System.out.print("E ");
-			}else{
+			}else if(executepipeline.get(i) == 0){
 				System.out.print("  ");
+			}else{
+				System.out.print("S ");
+			}
+		}
+		System.out.println();
+
+		for(int i=0; i<memorypipeline.size(); i++){
+			if(memorypipeline.get(i) == 1){
+				System.out.print("M ");
+			}else if(memorypipeline.get(i) == 0){
+				System.out.print("  ");
+			}else{
+				System.out.print("S ");
+			}
+		}
+		System.out.println();
+
+		for(int i=0; i<writebackpipeline.size(); i++){
+			if(writebackpipeline.get(i) == 1){
+				System.out.print("W ");
+			}else if(writebackpipeline.get(i) == 0){
+				System.out.print("  ");
+			}else{
+				System.out.print("S ");
 			}
 		}
 		System.out.println();
