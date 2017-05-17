@@ -1,0 +1,9 @@
+Decode.class
+Execute.class
+Flag.class
+Instruction.class
+LexicalAnalyzer.class
+Main.class
+Memory.class
+Register.class
+Writeback.class
