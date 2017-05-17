@@ -2,17 +2,12 @@ import java.util.*;
 import java.io.*;
 
 public class Main{
-	static Register[] r = new Register[32];
-	// static Execute execute = new Execute(r);
-	static Flag ZF = new Flag();
-	static Flag NF = new Flag();
-	static Flag UF = new Flag();
-	static Flag OF = new Flag();
 	static int instrSetSize;
 	static int clockcycle;
 	static int counter = 1;
 	static int stalls = 0;
 	static int instrDone = 0;
+	static Computer computer = new Computer();
 	static ArrayList<Instruction> processQueue = new ArrayList<Instruction>();
 	static ArrayList<Instruction> instrQueue = new ArrayList<Instruction>();
 
@@ -126,11 +121,6 @@ public class Main{
 		if (parse.error.getValue()) {
 			System.exit(0);
 		}
-		
-		// initialize registers
-		for (int i = 0; i<32; i++) {
-			r[i] = new Register(i);
-		}
 
 		// Identify dependencies
 		setDependencies(parse.instructions);
@@ -217,11 +207,7 @@ public class Main{
 							// check dependencies
 							if(!writeback && instruction.checkDependencies()){ // ready
 								// Writeback
-								/*
-		
-
-
-								*/
+								computer.Writeback(instruction);
 
 								instruction.restore();
 								instruction.pipe.add("W");
@@ -244,11 +230,8 @@ public class Main{
 						}else if(instruction.getStage() == 3){
 							if(!writeback && instruction.checkDependencies()){
 								// Writeback
-								/*
+								computer.Writeback(instruction);
 
-
-
-								*/
 								instruction.nextStage();
 								instruction.pipe.add("W");
 
@@ -274,11 +257,8 @@ public class Main{
 							// check dependencies
 							if(!memory && instruction.checkDependencies()){ // ready
 								// Memory Access
-								/*
+								computer.Memory(instruction);
 
-
-
-								*/
 								instruction.restore();
 								instruction.pipe.add("M");
 
@@ -300,11 +280,7 @@ public class Main{
 						}else if(instruction.getStage() == 2){
 							if(!memory && instruction.checkDependencies()){
 								// Memory Access
-								/*
-
-
-
-								*/
+								computer.Memory(instruction);
 
 								instruction.nextStage();
 								instruction.pipe.add("M");
@@ -331,11 +307,8 @@ public class Main{
 							// check dependencies
 							if(!execute && instruction.checkDependencies()){ // ready
 								// Execute
-								/*
-
-
-
-								*/
+								instruction.executed = computer.Execute(instruction);
+								
 								instruction.restore();
 								instruction.pipe.add("E");
 
@@ -357,11 +330,8 @@ public class Main{
 						}else if(instruction.getStage() == 1){
 							if(!execute && instruction.checkDependencies()){
 								// Execute
-								/*
+								instruction.executed = computer.Execute(instruction);
 
-
-
-								*/
 								instruction.nextStage();
 								instruction.pipe.add("E");
 
@@ -388,8 +358,7 @@ public class Main{
 							// check dependencies
 							if(!decode && ready){ // ready
 								// Decode
-								// Decode decoder = new Decode(instruction);
-								// instruction.decoded = decoder.getDecoded();
+								instruction.decoded = computer.Decode(instruction);
 								
 								instruction.restore();
 								instruction.pipe.add("D");
@@ -413,8 +382,7 @@ public class Main{
 						}else if(instruction.getStage() == 0){
 							if(!decode && ready){
 								// Decode
-								// Decode decoder = new Decode(instruction);
-								// instruction.decoded = decoder.getDecoded();
+								instruction.decoded = computer.Decode(instruction);
 								
 								instruction.nextStage();
 								instruction.pipe.add("D");
@@ -490,11 +458,7 @@ public class Main{
 		if(empty) System.out.println("-- None.");
 		System.out.println();
 
-		// Print registers
-		// for(int i=0; i<32; i++){
-		// 	System.out.println("R" + i + ": " + r[i].getValue());
-		// }
-
+		computer.printRegisters();
 	}
 }
 

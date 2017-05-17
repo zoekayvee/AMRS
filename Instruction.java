@@ -51,12 +51,20 @@ public class Instruction {
 		return this.instr;
 	}
 
+	public Vector getDecoded(){
+		return this.decoded;
+	}
+
 	public void setOperand2(Object operand2) {
 		this.operand2 = operand2;
 	}
 
 	public Object getOperand2(){
 		return this.operand2;
+	}
+
+	public void setDestination(int destRegNo){
+		this.destination = destRegNo;
 	}
 
 	public void setOperand1(Object operand1) {
@@ -108,14 +116,6 @@ public class Instruction {
 				for(Instruction  instr : Main.processQueue){
 					if(instr.id != this.id && instr.id == (int) dependency.get(1) && (int) dependency.get(1) < this.id){
 						ready = false;
-
-						Vector hazard = new Vector();
-						hazard.add(Main.clockcycle);
-						for(Object info : dependency){
-							hazard.add(info);
-						}
-						Main.hazardsEncountered.add(hazard);
-
 						flag = true;
 						break;
 					}
@@ -131,14 +131,6 @@ public class Instruction {
 				for(Instruction instr : Main.processQueue){
 					if(instr.id != this.id && instr.id == (int) dependency.get(0)  && (int) dependency.get(0) < this.id){
 						ready = false;
-						
-						Vector hazard = new Vector();
-						hazard.add(Main.clockcycle);
-						for(Object info : dependency){
-							hazard.add(info);
-						}
-						Main.hazardsEncountered.add(hazard);
-						
 						flag = true;
 						break;
 					}
