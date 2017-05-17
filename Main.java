@@ -9,7 +9,7 @@ public class Main{
 	static Flag UF = new Flag();
 	static Flag OF = new Flag();
 	static int instrSetSize;
-	static int counter = 0;
+	static int counter = 1;
 	static int stalls = 0;
 	static int instrDone = 0;
 	static ArrayList<Instruction> processQueue = new ArrayList<Instruction>();
@@ -42,7 +42,6 @@ public class Main{
 	static ArrayList<Vector> done = new ArrayList<Vector>();
 	
 	public static Instruction performStall(Instruction instruction){
-		// System.out.println("Staaaaaaaaaal");
 		instruction.stall();
 		instruction.pipe.add("S");
 
@@ -85,7 +84,6 @@ public class Main{
 					hazard.add(i+1);
 					hazard.add(j+1);
 					hazard.add("RAW");
-					// System.out.println(hazard);
 					hazards.add(hazard);
 				}
 					
@@ -95,7 +93,6 @@ public class Main{
 					hazard.add(i+1);
 					hazard.add(j+1);
 					hazard.add("WAR");
-					// System.out.println(hazard);
 					hazards.add(hazard);
 				}
 					
@@ -105,7 +102,6 @@ public class Main{
 					hazard.add(i+1);
 					hazard.add(j+1);
 					hazard.add("WAW");
-					// System.out.println(hazard);
 					hazards.add(hazard);
 				}
 			}
@@ -135,12 +131,15 @@ public class Main{
 		for(Vector instr : parse.instructions){
 			Instruction instruction = new Instruction(instr);
 			instrQueue.add(instruction);
+			counter++;
 		}
 
+		// Print instructions
 		for(Instruction i: instrQueue){
 			System.out.println(i.instr);
 		}
 
+		// Print Hazards
 		for(Vector haz : hazards){
 			System.out.println(haz);
 		}
@@ -157,9 +156,6 @@ public class Main{
 
 			int index = 0;
 			for(Instruction instruction : instrQueue){
-				System.out.println(instruction.instr);
-
-
 				// Perform stages	
 
 				// Pipeline empty
@@ -169,7 +165,7 @@ public class Main{
 					processQueue.add(instruction);
 
 					fetch = true;
-					counter++;
+					
 
 					for(int i=0; i<instrQueue.size(); i++){
 						if(!instrQueue.get(i).pipe.contains("F")) instrQueue.get(i).pipe.add("-");
@@ -187,13 +183,25 @@ public class Main{
 							processQueue.add(instruction);
 
 							fetch = true;
-							counter++;
+							
 						}else{
 							instruction.pipe.add("-");
 						}
 
 					// Instructions in process queue
 					}else{
+						// REMOVE FINISHED INSTRUCTION
+						if(instruction.getStage() == 4){
+							int y = 0;
+							for(Instruction x : processQueue){
+								if(x.id == instruction.id){
+									processQueue.remove(y);
+									instrDone++;
+									break;
+								}
+								y++;
+							}
+						}
 
 						// WRITEBACK
 						if(instruction.isStalled && instruction.getStalled() == 3){
@@ -205,6 +213,7 @@ public class Main{
 
 
 								*/
+
 								instruction.restore();
 								instruction.pipe.add("W");
 
@@ -212,8 +221,7 @@ public class Main{
 								int y = 0;
 								for(Instruction x : processQueue){
 									if(x.id == instruction.id){
-										processQueue.remove(y);
-										instrDone++;
+										processQueue.set(y, instruction);
 										break;
 									}
 									y++;
@@ -239,8 +247,7 @@ public class Main{
 								int y = 0;
 								for(Instruction x : processQueue){
 									if(x.id == instruction.id){
-										processQueue.remove(y);
-										instrDone++;
+										processQueue.set(y, instruction);
 										break;
 									}
 									y++;
@@ -289,6 +296,7 @@ public class Main{
 
 
 								*/
+
 								instruction.nextStage();
 								instruction.pipe.add("M");
 
@@ -366,9 +374,10 @@ public class Main{
 						}
 
 						// DECODE
+						boolean ready = instruction.checkDependencies();
 						if(instruction.isStalled && instruction.getStalled() == 0){
 							// check dependencies
-							if(!decode && instruction.checkDependencies()){ // ready
+							if(!decode && ready){ // ready
 								// Decode
 								// Decode decoder = new Decode(instruction);
 								// instruction.decoded = decoder.getDecoded();
@@ -393,8 +402,7 @@ public class Main{
 							}
 
 						}else if(instruction.getStage() == 0){
-							System.out.println("HI - " + instruction.checkDependencies());
-							if(!decode && instruction.checkDependencies()){
+							if(!decode && ready){
 								// Decode
 								// Decode decoder = new Decode(instruction);
 								// instruction.decoded = decoder.getDecoded();
@@ -424,27 +432,35 @@ public class Main{
 
 				}
 
-				printQueues(clockcycle);
+				// printQueues(clockcycle);
 
 				index++;
 			}
 
-			// printQueues(clockcycle);
+			printQueues(clockcycle);
 
 			clockcycle++;
-			if(clockcycle == 4) break;
+			// if(clockcycle == 9) break;
 		}
 	}
 
 	public static void printQueues(int clockcycle){
+		System.out.println();
 		System.out.println("Clock Cycle: " + clockcycle);
 		System.out.println("Stalls: " + stalls);
+		System.out.println();
+
+		// Print clock cycle label
+		for(int i=0; i<clockcycle; i++){
+			if(i>9) System.out.print(i + " ");
+			else System.out.print(i + "  ");
+		}
 
 		for(Instruction i : instrQueue){
 			for(String x : i.pipe){
 				// if(x.equals("-") ) System.out.print("  ");
 				// else System.out.print(x + " ");
-				System.out.print(x + " ");
+				System.out.print(x + "  ");
 			}
 			System.out.println();
 		}

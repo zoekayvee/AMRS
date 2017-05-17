@@ -29,7 +29,7 @@ public class Instruction {
 	*/
 		
 	public Instruction(Vector instr) {
-		this.id = Main.counter + 1;
+		this.id = Main.counter;
 		this.instr = instr;
 		this.stage = 0; // initialize to fetch
 		this.stalled = -1;
@@ -100,43 +100,33 @@ public class Instruction {
 		boolean flag;
 
 		for(Vector dependency : Main.hazards){
-			System.out.println(dependency);
-			System.out.println("ID: " + this.id);
 
 			flag = false;
-			if((int) dependency.get(0) == this.id){
+			if((int) dependency.get(0) == this.id ){
 				// check if the dependency is still in the process queue
 
-				System.out.println("-------------");
-				for(Instruction instr : Main.processQueue){
-					System.out.print(instr.instr);
-					System.out.print(" " + instr.id + " " + this.id);
-					System.out.println();
-					if(instr.id != this.id && instr.id == (int) dependency.get(1)){
-						System.out.println("They equal");
+				for(Instruction  instr : Main.processQueue){
+					if(instr.id != this.id && instr.id == (int) dependency.get(1) && (int) dependency.get(1) < this.id){
 						ready = false;
 						flag = true;
 						break;
 					}
 				}
-				System.out.println("-------------");
 
 				if(flag) break;
 			}
 
+			flag = false;
 			if((int) dependency.get(1) == this.id){
 				// check if the dependency is still in the process queue
 
-				System.out.println("-------------");
 				for(Instruction instr : Main.processQueue){
-					if(instr.id != this.id && instr.id == (int) dependency.get(0)){
-						System.out.println("They equal");
+					if(instr.id != this.id && instr.id == (int) dependency.get(0)  && (int) dependency.get(0) < this.id){
 						ready = false;
 						flag = true;
 						break;
 					}
 				}
-				System.out.println("-------------");
 
 				if(flag) break;
 			}
