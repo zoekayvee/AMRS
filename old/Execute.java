@@ -32,6 +32,11 @@ public class Execute {
 	}
 
 	public static void add(Vector instruction) {
+		System.out.println("ADD");
+		String regNo = (String) instruction.get(1);
+		regNo = regNo.substring(1);
+		int destReg = Integer.parseInt(regNo);
+		
 		int addendA = (int) instruction.get(2);
 
 		int sum = Main.r[destReg].getValue() + addendA;

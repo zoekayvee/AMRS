@@ -2,22 +2,28 @@ import java.util.*;
 import java.io.*;
 
 public class Decode {
-	Instruction decoded;
+	Vector decoded;
 
 	public Decode (Instruction instruction) {
-		this.decoded = instruction;
+		this.decoded = instruction.instr;
+
+		String source = "" + decoded.get(1);
+		// System.out.println("----" + source);
+		String sourceReg = "" + source.charAt(1);
+		int sourceRegNo = Integer.parseInt(sourceReg);
+		decoded.set(1, Main.r[sourceRegNo].getValue());
 
 		// Checks if source is not an integer
-		if (decoded.getOperand2() instanceof Integer == false) {
+		if (decoded.get(2) instanceof Integer == false) {
 			// Identifies source's register
-			String source = (String) decoded.getOperand2();
-			String sourceReg = (String) source.substring(1);
-			int sourceRegNo = Integer.parseInt(sourceReg);
-			decoded.setOperand2(Main.r[sourceRegNo].getValue());
+			source = (String) decoded.get(2);
+			sourceReg = (String) source.substring(1);
+			sourceRegNo = Integer.parseInt(sourceReg);
+			decoded.set(2, Main.r[sourceRegNo].getValue());
 		}		
 	}
 
-	public Instruction getDecoded() {
+	public Vector getDecoded() {
 		return this.decoded;
 	}
 }

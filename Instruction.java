@@ -6,8 +6,10 @@ public class Instruction {
 	Vector instr;  			//['load' R1, 5]
 	Vector decoded; 		//['load' 0, 5]
 	int executed; 			//5
-	// memory
+	int memory;
+	int destination;
 	// writeback						
+	ArrayList<String> pipe = new ArrayList<String>();
 
 	int stage;
 	int stalled;
@@ -74,9 +76,13 @@ public class Instruction {
 	}
 
 	public void stall(){
-		this.stage = -1;
-		this.isStalled = true;
-		this.stalled = this.stage;
+		// if previously not stalled
+		if(!this.isStalled){
+			this.isStalled = true;
+			this.stalled = this.stage;
+			this.stage = -1;
+		}
+		// else retain stall state
 	}
 
 	public void restore(){
@@ -93,18 +99,27 @@ public class Instruction {
 		boolean ready = true;
 		boolean flag;
 
-		for(Vector dependency : Main.dependencies){
+		for(Vector dependency : Main.hazards){
+			System.out.println(dependency);
+			System.out.println("ID: " + this.id);
+
 			flag = false;
 			if((int) dependency.get(0) == this.id){
 				// check if the dependency is still in the process queue
 
+				System.out.println("-------------");
 				for(Instruction instr : Main.processQueue){
-					if(instr.id == (int) dependency.get(1)){
+					System.out.print(instr.instr);
+					System.out.print(" " + instr.id + " " + this.id);
+					System.out.println();
+					if(instr.id != this.id && instr.id == (int) dependency.get(1)){
+						System.out.println("They equal");
 						ready = false;
 						flag = true;
 						break;
 					}
 				}
+				System.out.println("-------------");
 
 				if(flag) break;
 			}
@@ -112,19 +127,24 @@ public class Instruction {
 			if((int) dependency.get(1) == this.id){
 				// check if the dependency is still in the process queue
 
+				System.out.println("-------------");
 				for(Instruction instr : Main.processQueue){
-					if(instr.id == (int) dependency.get(0)){
+					if(instr.id != this.id && instr.id == (int) dependency.get(0)){
+						System.out.println("They equal");
 						ready = false;
 						flag = true;
 						break;
 					}
 				}
+				System.out.println("-------------");
 
 				if(flag) break;
 			}
 		}
 
-		return (ready) ? true : false;
+		return ready;
 	}
+
+
 
 }

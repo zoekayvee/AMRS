@@ -13,6 +13,7 @@ public class Main{
 	static int stalls = 0;
 	static int instrDone = 0;
 	static ArrayList<Instruction> processQueue = new ArrayList<Instruction>();
+	static ArrayList<Instruction> instrQueue = new ArrayList<Instruction>();
 
 	static ArrayList<Vector> hazards = new ArrayList<Vector>();
 	static ArrayList<Vector> dependencies = new ArrayList<Vector>();
@@ -25,11 +26,11 @@ public class Main{
 
 	*/
 
-	static int fetch = 0;
-	static int decode = 0;
-	static int execute = 0;
-	static int memory = 0;
-	static int writeback = 0;
+	static boolean fetch = false;
+	static boolean decode = false;
+	static boolean execute = false;
+	static boolean memory = false;
+	static boolean writeback = false;
 
 	static ArrayList<Integer> fetchpipeline = new ArrayList<Integer>();
 	static ArrayList<Integer> decodepipeline = new ArrayList<Integer>();
@@ -38,6 +39,26 @@ public class Main{
 	static ArrayList<Integer> writebackpipeline = new ArrayList<Integer>();
 
 	static ArrayList<Vector> pipes = new ArrayList<Vector>();
+	static ArrayList<Vector> done = new ArrayList<Vector>();
+	
+	public static Instruction performStall(Instruction instruction){
+		// System.out.println("Staaaaaaaaaal");
+		instruction.stall();
+		instruction.pipe.add("S");
+
+		// find representation in queue
+		int y = 0;
+		for(Instruction x : processQueue){
+			if(x.id == instruction.id){
+				processQueue.set(y, instruction);
+				break;
+			}
+			y++;
+		}
+
+		stalls++;
+		return instruction;
+	}
 	
 	public static void setDependencies(ArrayList<Vector> instructions){
 		/*
@@ -64,7 +85,7 @@ public class Main{
 					hazard.add(i+1);
 					hazard.add(j+1);
 					hazard.add("RAW");
-					System.out.println(hazard);
+					// System.out.println(hazard);
 					hazards.add(hazard);
 				}
 					
@@ -74,7 +95,7 @@ public class Main{
 					hazard.add(i+1);
 					hazard.add(j+1);
 					hazard.add("WAR");
-					System.out.println(hazard);
+					// System.out.println(hazard);
 					hazards.add(hazard);
 				}
 					
@@ -84,7 +105,7 @@ public class Main{
 					hazard.add(i+1);
 					hazard.add(j+1);
 					hazard.add("WAW");
-					System.out.println(hazard);
+					// System.out.println(hazard);
 					hazards.add(hazard);
 				}
 			}
@@ -110,266 +131,308 @@ public class Main{
 		// Identify dependencies
 		setDependencies(parse.instructions);
 
+		// Initialize all instructions
+		for(Vector instr : parse.instructions){
+			Instruction instruction = new Instruction(instr);
+			instrQueue.add(instruction);
+		}
+
+		for(Instruction i: instrQueue){
+			System.out.println(i.instr);
+		}
+
+		for(Vector haz : hazards){
+			System.out.println(haz);
+		}
+
 		// PIPELINING
 		int clockcycle = 1;
 		while(instrDone != instrSetSize){
+			// reset
+			fetch = false;
+			decode = false;
+			execute = false;
+			memory = false;
+			writeback = false;
 
-			// Pipeline empty
-			if(processQueue.isEmpty()){
-				// Perform FETCH only
-				Instruction instr = new Instruction(parse.instructions.get(counter));
-				processQueue.add(instr);
-				fetch = 1;
-				counter++;			
-			// Pipeline not empty
-			}else{
-				int fcount = 0;
-				int dcount = 0;
-				int ecount = 0;
-				int mcount = 0;
-				int wcount = 0;
-				int scount = 0;
+			int index = 0;
+			for(Instruction instruction : instrQueue){
+				System.out.println(instruction.instr);
 
-				// count waiting instr per stages
-				for(Instruction instr : processQueue){
-					switch(instr.getStage()){
-						case -1:
-							if(instr.getStalled() == 0) dcount++;
-							else if(instr.getStalled() == 1) ecount++;
-							else if(instr.getStalled() == 2) mcount++;
-							else if(instr.getStalled() == 3) wcount++;
-							break;
-						case 0:
-							dcount++;
-							break;
-						case 1:
-							ecount++;
-							break;
-						case 2:
-							mcount++;
-							break;
-						case 3:
-							wcount++;
-							break;
-					}
-				}
 
-				// FETCH an instruction
-				if(counter != instrSetSize){
-					Instruction instr = new Instruction(parse.instructions.get(counter));
+				// Perform stages	
 
-					// update count
-					processQueue.add(instr);
-					fetch = 1;
+				// Pipeline empty
+				if(processQueue.isEmpty()){
+					// FETCH only
+					instruction.pipe.add("F");
+					processQueue.add(instruction);
+
+					fetch = true;
 					counter++;
-				}
 
-				// DECODE
-				if(dcount != 0){
-					int index = 0;
-					for(Instruction instr : processQueue){
-						// look for a stalled instruction waiting for decode
-						if(instr.isStalled && instr.getStalled() == 0){
-
-							if(instr.checkDependencies()){
-								instr.stall();
-								stalls++;
-								decode = -1;
-							}else{
-								// Decode instruction
-								Decode decoder = new Decode(instr);
-								Instruction decoded = decoder.getDecoded();
-								decoded.restore();
-								processQueue.set(index, decoded);
-							}
-
-							break;
-						}
-
-						// look for instruction in queue to decode
-						if(decode == 0 && instr.getStage() == 0){
-							// Decode instruction
-							Decode decoder = new Decode(instr);
-							Instruction decoded = decoder.getDecoded();
-							decoded.nextStage();
-							processQueue.set(index, decoded);
-							
-							decode = 1;
-
-							// if there are other instructions to stall
-							for(int i=index; i<processQueue.size(); i++){
-								if(processQueue.get(i).isStalled && processQueue.get(i).getStalled() == 0){
-									processQueue.get(i).stall();
-									stalls++;
-								}
-							}
-
-							break;
-						}
-						index++;
+					for(int i=0; i<instrQueue.size(); i++){
+						if(!instrQueue.get(i).pipe.contains("F")) instrQueue.get(i).pipe.add("-");
 					}
-				}
-				
-				// EXECUTE
-				if(ecount != 0){
-					int index = 0;
-					for(Instruction instr: processQueue){
-						if(instr.isStalled && instr.getStalled() == 1){
-							if(instr.checkDependencies()){
-								instr.stall();
-								stalls++;
-								execute = -1;
-							}else{
-								// Execute instruction
-								Execute executer = new Execute(instr);
-								instr.nextStage();
-								execute = 1;
-								// processQueue.remove(index); // for test muna 
-								// instrDone++; // for test muna
-							}
-							break;
+
+
+					break;
+				// Pipeline not empty
+				}else{
+
+					// Instruction not yet in process queue
+					if(!instruction.pipe.contains("F")){ // not yet fetched
+						if(!fetch){
+							instruction.pipe.add("F");
+							processQueue.add(instruction);
+
+							fetch = true;
+							counter++;
+						}else{
+							instruction.pipe.add("-");
 						}
 
-						// look for instruction to execute
-						// must be on decode stage before execute
-						if(execute == 0 && instr.getStage() == 1){
-							// Execute instruction
-							// Execute executer = new Execute(instr);
-							instr.nextStage();
-							execute = 1;
-							// processQueue.remove(index);
-							// instrDone++;
+					// Instructions in process queue
+					}else{
+
+						// WRITEBACK
+						if(instruction.isStalled && instruction.getStalled() == 3){
+							// check dependencies
+							if(!writeback && instruction.checkDependencies()){ // ready
+								// Writeback
+								/*
+		
 
 
-							// if there are other instructions to stall
-							for(int i=index; i<processQueue.size(); i++){
-								if(processQueue.get(i).isStalled && processQueue.get(i).getStalled() == 1){
-									processQueue.get(i).stall();
-									stalls++;
+								*/
+								instruction.restore();
+								instruction.pipe.add("W");
+
+								// find representation in queue
+								int y = 0;
+								for(Instruction x : processQueue){
+									if(x.id == instruction.id){
+										processQueue.remove(y);
+										instrDone++;
+										break;
+									}
+									y++;
 								}
+
+								writeback = true;
+
+							}else{ // stall
+								Instruction stalled = performStall(instruction);
 							}
-							break;
+						}else if(instruction.getStage() == 3){
+							if(!writeback && instruction.checkDependencies()){
+								// Writeback
+								/*
+
+
+
+								*/
+								instruction.nextStage();
+								instruction.pipe.add("W");
+
+								// find representation in queue
+								int y = 0;
+								for(Instruction x : processQueue){
+									if(x.id == instruction.id){
+										processQueue.remove(y);
+										instrDone++;
+										break;
+									}
+									y++;
+								}
+
+								writeback = true;
+
+							}else{
+								Instruction stalled = performStall(instruction);
+							}
 						}
+
+						// MEMORY
+						if(instruction.isStalled && instruction.getStalled() == 2){
+							// check dependencies
+							if(!memory && instruction.checkDependencies()){ // ready
+								// Memory Access
+								/*
+
+
+
+								*/
+								instruction.restore();
+								instruction.pipe.add("M");
+
+								// find representation in queue
+								int y = 0;
+								for(Instruction x : processQueue){
+									if(x.id == instruction.id){
+										processQueue.set(y, instruction);
+										break;
+									}
+									y++;
+								}
+
+								memory = true;
+
+							}else{ // stall
+								Instruction stalled = performStall(instruction);
+							}
+						}else if(instruction.getStage() == 2){
+							if(!memory && instruction.checkDependencies()){
+								// Memory Access
+								/*
+
+
+
+								*/
+								instruction.nextStage();
+								instruction.pipe.add("M");
+
+								// find representation in queue
+								int y = 0;
+								for(Instruction x : processQueue){
+									if(x.id == instruction.id){
+										processQueue.set(y, instruction);
+										break;
+									}
+									y++;
+								}
+
+								memory = true;
+
+							}else{
+								Instruction stalled = performStall(instruction);
+							}
+						}
+
+						// EXECUTE
+						if(instruction.isStalled && instruction.getStalled() == 1){
+							// check dependencies
+							if(!execute && instruction.checkDependencies()){ // ready
+								// Execute
+								/*
+
+
+
+								*/
+								instruction.restore();
+								instruction.pipe.add("E");
+
+								// find representation in queue
+								int y = 0;
+								for(Instruction x : processQueue){
+									if(x.id == instruction.id){
+										processQueue.set(y, instruction);
+										break;
+									}
+									y++;
+								}
+
+								execute = true;
+
+							}else{ // stall
+								Instruction stalled = performStall(instruction);
+							}
+						}else if(instruction.getStage() == 1){
+							if(!execute && instruction.checkDependencies()){
+								// Execute
+								/*
+
+
+
+								*/
+								instruction.nextStage();
+								instruction.pipe.add("E");
+
+								// find representation in queue
+								int y = 0;
+								for(Instruction x : processQueue){
+									if(x.id == instruction.id){
+										processQueue.set(y, instruction);
+										break;
+									}
+									y++;
+								}
+
+								execute = true;
+
+							}else{
+								Instruction stalled = performStall(instruction);
+							}
+						}
+
+						// DECODE
+						if(instruction.isStalled && instruction.getStalled() == 0){
+							// check dependencies
+							if(!decode && instruction.checkDependencies()){ // ready
+								// Decode
+								// Decode decoder = new Decode(instruction);
+								// instruction.decoded = decoder.getDecoded();
+								
+								instruction.restore();
+								instruction.pipe.add("D");
+
+								// find representation in queue
+								int y = 0;
+								for(Instruction x : processQueue){
+									if(x.id == instruction.id){
+										processQueue.set(y, instruction);
+										break;
+									}
+									y++;
+								}
+
+								decode = true;
+
+							}else{ // stall
+								Instruction stalled = performStall(instruction);
+							}
+
+						}else if(instruction.getStage() == 0){
+							System.out.println("HI - " + instruction.checkDependencies());
+							if(!decode && instruction.checkDependencies()){
+								// Decode
+								// Decode decoder = new Decode(instruction);
+								// instruction.decoded = decoder.getDecoded();
+								
+								instruction.nextStage();
+								instruction.pipe.add("D");
+
+								// find representation in queue
+								int y = 0;
+								for(Instruction x : processQueue){
+									if(x.id == instruction.id){
+										processQueue.set(y, instruction);
+										break;
+									}
+									y++;
+								}
+
+								decode = true;
+
+							}else{
+								Instruction stalled = performStall(instruction);
+							}
+						}						
 						
-						index++;
 					}
+
+
 				}
 
-				// MEMORY
-				if(mcount != 0){
-					int index = 0;
-					for(Instruction instr: processQueue){
-						if(instr.isStalled && instr.getStalled() == 2){
-							if(instr.checkDependencies()){
-								instr.stall();
-								stalls++;
-								memory = -1;
-							}else{
-								// Memory access
-								// insert code here
-								instr.nextStage();
-								memory = 1;
-							}
-							break;
-						}
+				printQueues(clockcycle);
 
-						// look for instruction to do memory access
-						if(memory == 0 && instr.getStage() == 2){
-							// Memory Access
-							// insert code here
-							instr.nextStage();
-							memory = 1;
-							
-							// if there are other instructions to stall
-							for(int i=index; i<processQueue.size(); i++){
-								if(processQueue.get(i).isStalled && processQueue.get(i).getStalled() == 2){
-									processQueue.get(i).stall();
-									stalls++;
-								}
-							}
-							break;
-						}
-						
-						index++;
-					}
-				}
-
-
-				// WRITEBACK
-				if(wcount != 0){
-					int index = 0;
-					for(Instruction instr: processQueue){
-						if(instr.isStalled && instr.getStalled() == 3){
-							if(instr.checkDependencies()){
-								instr.stall();
-								stalls++;
-								writeback = -1;
-							}else{
-								// Write to memory
-								// insert code here
-								instr.nextStage();
-								writeback = 1;
-
-								processQueue.remove(index); // for test muna 
-								instrDone++; // for test muna
-
-							}
-							break;
-						}
-
-						// look for instruction to do memory access
-						if(writeback == 0 && instr.getStage() == 3){
-							// Write to memory
-							// insert code here
-							instr.nextStage();
-							writeback = 1;
-
-							processQueue.remove(index); // for test muna 
-							instrDone++; // for test muna
-							
-							// if there are other instructions to stall
-							for(int i=index; i<processQueue.size(); i++){
-								if(processQueue.get(i).isStalled && processQueue.get(i).getStalled() == 3){
-									processQueue.get(i).stall();
-									stalls++;
-								}
-							}
-							break;
-						}
-						
-						index++;
-					}
-				}
+				index++;
 			}
 
-			// store values for printing later
+			// printQueues(clockcycle);
 
-			fetchpipeline.add(fetch);
-			decodepipeline.add(decode);
-			executepipeline.add(execute);
-			memorypipeline.add(memory);
-			writebackpipeline.add(writeback);
-
-			Vector pipe = new Vector();
-			pipe.add(fetch);
-			pipe.add(decode);
-			pipe.add(execute);
-			pipe.add(memory);
-			pipe.add(writeback);
-			pipes.add(pipe);
-
-			printQueues(clockcycle);
-
-
-			// reset
-			fetch = 0;
-			decode = 0;
-			execute = 0;
-			memory = 0;
-			writeback = 0;
-			
 			clockcycle++;
-
+			if(clockcycle == 4) break;
 		}
 	}
 
@@ -377,129 +440,14 @@ public class Main{
 		System.out.println("Clock Cycle: " + clockcycle);
 		System.out.println("Stalls: " + stalls);
 
-		for(int i=0; i<pipes.size(); i++){
-			// Fetch
-			int status = (int) pipes.get(i).get(0);
-			switch(status){
-				case -1:
-					System.out.print("S ");
-					break;
-				case 0:
-					System.out.print("  ");
-					break;
-				case 1:
-					System.out.print("F ");
-					break;
-			}
-			// Decode
-			status = (int) pipes.get(i).get(1);
-			switch(status){
-				case -1:
-					System.out.print("S ");
-					break;
-				case 0:
-					System.out.print("  ");
-					break;
-				case 1:
-					System.out.print("D ");
-					break;
-			}
-			// Execute
-			status = (int) pipes.get(i).get(2);
-			switch(status){
-				case -1:
-					System.out.print("S ");
-					break;
-				case 0:
-					System.out.print("  ");
-					break;
-				case 1:
-					System.out.print("E ");
-					break;
-			}
-
-			// Memory
-			status = (int) pipes.get(i).get(3);
-			switch(status){
-				case -1:
-					System.out.print("S ");
-					break;
-				case 0:
-					System.out.print("  ");
-					break;
-				case 1:
-					System.out.print("M ");
-					break;
-			}
-
-			// Writeback
-			status = (int) pipes.get(i).get(4);
-			switch(status){
-				case -1:
-					System.out.print("S ");
-					break;
-				case 0:
-					System.out.print("  ");
-					break;
-				case 1:
-					System.out.print("W ");
-					break;
+		for(Instruction i : instrQueue){
+			for(String x : i.pipe){
+				// if(x.equals("-") ) System.out.print("  ");
+				// else System.out.print(x + " ");
+				System.out.print(x + " ");
 			}
 			System.out.println();
 		}
-
-		// for(int i=0; i<fetchpipeline.size(); i++){
-		// 	if(fetchpipeline.get(i) == 1){
-		// 		System.out.print("F ");
-		// 	}else if(fetchpipeline.get(i) == 0){
-		// 		System.out.print("  ");
-		// 	}else{
-		// 		System.out.print("S ");
-		// 	}
-		// }
-		// System.out.println();
-		// for(int i=0; i<decodepipeline.size(); i++){
-		// 	if(decodepipeline.get(i) == 1){
-		// 		System.out.print("D ");
-		// 	}else if(decodepipeline.get(i) == 0){
-		// 		System.out.print("  ");
-		// 	}else{
-		// 		System.out.print("S ");
-		// 	}
-		// }
-		// System.out.println();
-
-		// for(int i=0; i<executepipeline.size(); i++){
-		// 	if(executepipeline.get(i) == 1){
-		// 		System.out.print("E ");
-		// 	}else if(executepipeline.get(i) == 0){
-		// 		System.out.print("  ");
-		// 	}else{
-		// 		System.out.print("S ");
-		// 	}
-		// }
-		// System.out.println();
-
-		// for(int i=0; i<memorypipeline.size(); i++){
-		// 	if(memorypipeline.get(i) == 1){
-		// 		System.out.print("M ");
-		// 	}else if(memorypipeline.get(i) == 0){
-		// 		System.out.print("  ");
-		// 	}else{
-		// 		System.out.print("S ");
-		// 	}
-		// }
-		// System.out.println();
-
-		// for(int i=0; i<writebackpipeline.size(); i++){
-		// 	if(writebackpipeline.get(i) == 1){
-		// 		System.out.print("W ");
-		// 	}else if(writebackpipeline.get(i) == 0){
-		// 		System.out.print("  ");
-		// 	}else{
-		// 		System.out.print("S ");
-		// 	}
-		// }
-		// System.out.println();
 	}
 }
+
