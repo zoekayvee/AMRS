@@ -9,6 +9,7 @@ public class Main{
 	static Flag UF = new Flag();
 	static Flag OF = new Flag();
 	static int instrSetSize;
+	static int clockcycle;
 	static int counter = 1;
 	static int stalls = 0;
 	static int instrDone = 0;
@@ -16,6 +17,7 @@ public class Main{
 	static ArrayList<Instruction> instrQueue = new ArrayList<Instruction>();
 
 	static ArrayList<Vector> hazards = new ArrayList<Vector>();
+	static ArrayList<Vector> hazardsEncountered = new ArrayList<Vector>();
 	static ArrayList<Vector> dependencies = new ArrayList<Vector>();
 
 	/*
@@ -31,6 +33,7 @@ public class Main{
 	static boolean execute = false;
 	static boolean memory = false;
 	static boolean writeback = false;
+	static boolean stall = false;
 
 	static ArrayList<Integer> fetchpipeline = new ArrayList<Integer>();
 	static ArrayList<Integer> decodepipeline = new ArrayList<Integer>();
@@ -55,7 +58,7 @@ public class Main{
 			y++;
 		}
 
-		stalls++;
+		stall = true;
 		return instruction;
 	}
 	
@@ -66,14 +69,9 @@ public class Main{
 			1 - instruction 2 ID (int)
 			2 - type of hazard (string)
 
-			Note: The id of instruction is its position in the instructions set
-
 			Example of a vector
 			< 1, 4, RAW >
 		*/
-
-		// save all dependencies to ArrayList<Vector> dependencies 
-		// ArrayList<Vector> dependencies is already declared as static variable
 
 		for(int i=0; i<instructions.size()-1; i++){
 			for(int j=i+1; j<instructions.size(); j++){
@@ -109,8 +107,18 @@ public class Main{
 	}
 
 	public static void main(String[] args) {
+
+		System.out.println("Input file name:");
+		System.out.println("(e.g. input.txt)");
+		Scanner sc = new Scanner(System.in);
+		System.out.print(">>> ");
+		String fileinput = sc.nextLine();
+
 		// Parse input code
-		LexicalAnalyzer parse = new LexicalAnalyzer();
+		LexicalAnalyzer parse = new LexicalAnalyzer(fileinput);
+		if(!parse.parsed) System.out.println("Error parsing file. Please try again.");
+
+
 		instrSetSize = parse.instructions.size();
 
 
@@ -145,7 +153,7 @@ public class Main{
 		}
 
 		// PIPELINING
-		int clockcycle = 1;
+		clockcycle = 1;
 		while(instrDone != instrSetSize){
 			// reset
 			fetch = false;
@@ -153,6 +161,7 @@ public class Main{
 			execute = false;
 			memory = false;
 			writeback = false;
+			stall = false;
 
 			int index = 0;
 			for(Instruction instruction : instrQueue){
@@ -432,38 +441,60 @@ public class Main{
 
 				}
 
-				// printQueues(clockcycle);
-
 				index++;
 			}
 
-			printQueues(clockcycle);
-
+			if(stall) stalls++;
+			printInfo(clockcycle);
 			clockcycle++;
-			// if(clockcycle == 9) break;
 		}
 	}
 
-	public static void printQueues(int clockcycle){
+	public static void printInfo(int clockcycle){
 		System.out.println();
-		System.out.println("Clock Cycle: " + clockcycle);
+		System.out.println("CLOCK CYCLE: " + clockcycle);
 		System.out.println("Stalls: " + stalls);
-		System.out.println();
 
 		// Print clock cycle label
+		System.out.print("      ");
 		for(int i=0; i<clockcycle; i++){
 			if(i>9) System.out.print(i + " ");
 			else System.out.print(i + "  ");
 		}
+		System.out.println();
 
 		for(Instruction i : instrQueue){
+			if(i.id > 9){
+				System.out.print("I" + i.id + ":" + "  " );
+			}else{
+				System.out.print("I" + i.id + ":" + "   ");
+			}
+
 			for(String x : i.pipe){
-				// if(x.equals("-") ) System.out.print("  ");
-				// else System.out.print(x + " ");
 				System.out.print(x + "  ");
 			}
 			System.out.println();
 		}
+
+		// Print hazards
+
+		System.out.println();
+		System.out.println("Hazards Encountered:");
+		boolean empty = true;
+		for(Vector entry : hazardsEncountered) {
+	    if((int) entry.get(0) == clockcycle){
+	    	System.out.println("Instructions: " + entry.get(1) + " & " + entry.get(2) + " Type: " + entry.get(3));
+	    	empty = false;
+	    }
+		}
+		if(empty) System.out.println("-- None.");
+		System.out.println();
+
+		// Print registers
+		// for(int i=0; i<32; i++){
+		// 	System.out.println("R" + i + ": " + r[i].getValue());
+		// }
+
 	}
 }
 

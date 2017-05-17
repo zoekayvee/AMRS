@@ -4,16 +4,18 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class LexicalAnalyzer {
+	boolean parsed;
+	String file;
 	int lineNum = 0;
 	Flag OF = new Flag();
 	Flag UF = new Flag();
 	ArrayList<Vector> instructions = new ArrayList<Vector>();
 	Flag error = new Flag(false);
 	
-	public LexicalAnalyzer() {
+	public LexicalAnalyzer(String fileinput) {
 		try {
-			// System.out.println("asd");
-			FileReader readCode = new FileReader("input.txt");
+			this.file = fileinput;
+			FileReader readCode = new FileReader(this.file);
 			BufferedReader inputCode = new BufferedReader(readCode);		
 			String line = null;
 			String delims = (" ");
@@ -59,7 +61,9 @@ public class LexicalAnalyzer {
 			}
 
 			inputCode.close();
+			parsed = true;
 		}catch(Exception e) {
+			parsed = false;
 			System.out.println(e.getMessage());
 		}
 

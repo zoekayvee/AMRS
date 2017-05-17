@@ -108,6 +108,14 @@ public class Instruction {
 				for(Instruction  instr : Main.processQueue){
 					if(instr.id != this.id && instr.id == (int) dependency.get(1) && (int) dependency.get(1) < this.id){
 						ready = false;
+
+						Vector hazard = new Vector();
+						hazard.add(Main.clockcycle);
+						for(Object info : dependency){
+							hazard.add(info);
+						}
+						Main.hazardsEncountered.add(hazard);
+
 						flag = true;
 						break;
 					}
@@ -123,6 +131,14 @@ public class Instruction {
 				for(Instruction instr : Main.processQueue){
 					if(instr.id != this.id && instr.id == (int) dependency.get(0)  && (int) dependency.get(0) < this.id){
 						ready = false;
+						
+						Vector hazard = new Vector();
+						hazard.add(Main.clockcycle);
+						for(Object info : dependency){
+							hazard.add(info);
+						}
+						Main.hazardsEncountered.add(hazard);
+						
 						flag = true;
 						break;
 					}
