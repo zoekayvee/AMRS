@@ -22,6 +22,7 @@ public class Computer {
 		}
 	}
 
+	// Method to print register values
 	public void printRegisters(){
 		for (int i = 1; i<=32; i++) {
 			System.out.print("R" + i + ": " + register[i].getValue() + "\t");
@@ -31,6 +32,7 @@ public class Computer {
 		}
 	}
 
+	// Stage of decode, retrieves values and places in a Vector
 	public Vector Decode(Instruction instruction) {
 		Vector decode = new Vector();
 		decode = instruction.getInstructionVector();
@@ -53,10 +55,10 @@ public class Computer {
 			decode.set(2, register[sourceRegNo].getValue());
 		}
 
-		System.out.println("HALUUUU");
 		return decode;
 	}
 
+	// Calculates a value based on the opcode
 	public int Execute(Instruction instruction) {
 		int value = 0;
 		switch ((String) instruction.getOpcode()) {
@@ -70,6 +72,7 @@ public class Computer {
 								break;
 		}
 
+		// Checks for over/underflows
 		if (value > 99) {
 			value = 99;
 			OF.setValue(true);
@@ -109,8 +112,11 @@ public class Computer {
 		return true;
 	}
 
+	// Places executed value in designated register (unless CMP Opcode)
 	public void Writeback(Instruction instruction) {
-		register[instruction.destination].setValue(instruction.executed);
+		if ((String) instruction.getOpcode() != "CMP") {
+			register[instruction.destination].setValue(instruction.executed);
+		}
 	}
 
 }
